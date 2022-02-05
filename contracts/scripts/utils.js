@@ -1,13 +1,13 @@
 const Ethers = require('ethers');
 const { ethers } = Ethers;
 const { abi, bytecode } = require('../artifacts/contracts/Buildspace.sol/Buildspace.json');
-const config = require('../.auth.config.js');
+require("dotenv").config();
 
 const NETWORK = 'MATIC';
 
-const web3Provider = new ethers.providers.JsonRpcProvider(config[NETWORK].NODE_URL);
-const deployer = new ethers.Wallet(config[NETWORK].PRIVATE_KEY, web3Provider);
-const contract = new ethers.Contract(config[NETWORK].CONTRACT_ADDRESS, abi, deployer);
+const web3Provider = new ethers.providers.AlchemyProvider("matic", process.env.POLYGON_ALCHEMY_KEY);
+const deployer = new ethers.Wallet(process.env.PRIVATE_KEY, web3Provider);
+const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, web3Provider);
 
 async function main() {
   console.log('Deploying contracts with the account:', await deployer.getAddress());
@@ -59,14 +59,41 @@ async function createCohort(cohort_id, limit) {
 }
 
 async function fetchOwner(address) {
-  const tx = await contract.claimed(address, 'CHbdfb992f-80ca-44a4-b7f7-54bb0365ff50');
+  const tx = await contract.claimed(address, '');
   console.log(tx);
   return tx;
 }
 
-fetchUri('5579')
+async function fetchOwnerCohort(address, cohort) {
+  const tx = await contract.claimed(address, cohort);
+  let token_id = tx.toNumber();
+  if (token_id > 0) {
+    console.log("Found cohort", cohort, token_id);
+    await fetchUri(tx.toString());
+    process.exit(0);
+  }
+  console.log("Wrong cohort", cohort)
+}
+
+let cohorts = require('./cohorts.json');
+async function checkCohort() {
+  for (let i in cohorts) {
+    for (j in cohorts[i]) {
+      await fetchOwnerCohort(process.env.PUBLIC_KEY1, cohorts[i][j])
+      .catch(() => {
+        console.error("ERROR");
+      });
+    }
+  }
+}
+
+async function runMain() {
+  checkCohort()
   .then(() => process.exit(0))
   .catch(error => {
     console.error(error);
     process.exit(1);
   });
+}
+
+runMain();
