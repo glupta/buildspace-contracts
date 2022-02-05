@@ -70,16 +70,15 @@ async function fetchOwnerCohort(address, cohort) {
   if (token_id > 0) {
     console.log("Found cohort", cohort, token_id);
     await fetchUri(tx.toString());
-    process.exit(0);
   }
   console.log("Wrong cohort", cohort)
 }
 
 let cohorts = require('./cohorts.json');
-async function checkCohort() {
+async function checkCohort(address) {
   for (let i in cohorts) {
     for (j in cohorts[i]) {
-      await fetchOwnerCohort(process.env.PUBLIC_KEY1, cohorts[i][j])
+      await fetchOwnerCohort(address, cohorts[i][j])
       .catch(() => {
         console.error("ERROR");
       });
@@ -88,8 +87,13 @@ async function checkCohort() {
 }
 
 async function runMain() {
-  checkCohort()
-  .then(() => process.exit(0))
+  await fetchOwner(process.env.PUBLIC_KEY1)
+  .catch(error => {
+    console.error(error);
+    process.exit(1);
+  });
+
+  await checkCohort(process.env.PUBLIC_KEY1)
   .catch(error => {
     console.error(error);
     process.exit(1);
